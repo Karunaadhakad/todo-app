@@ -36,3 +36,700 @@
     transform: rotate(360deg);
   }
 }
+
+ .float-add-btn {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background-color: #2a8c7b;
+  color: white;
+  font-size: 32px;
+  border: none;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+  z-index: 9999;
+  cursor: pointer;
+}
+
+/* ============================================
+   DASHBOARD RESPONSIVE STYLES
+   ============================================ */
+
+/* Dashboard Title */
+.dashboard-title {
+  font-size: 1.75rem;
+}
+
+/* Sidebar */
+.sidebar-responsive {
+  border-bottom: 2px solid #ccc;
+}
+
+.sidebar-btn {
+  font-size: 14px;
+  padding: 8px;
+  word-break: break-word;
+}
+
+.user-avatar {
+  width: 70px !important;
+  height: 70px !important;
+  font-size: 32px !important;
+}
+
+/* Main Content */
+.main-content-responsive {
+  padding: 1rem !important;
+}
+
+/* Create Project Box */
+.create-project-box {
+  border-radius: 8px;
+}
+
+.create-project-title {
+  font-size: 1.1rem;
+}
+
+.create-project-input-group {
+  flex-wrap: wrap;
+}
+
+.project-input-responsive {
+  font-size: 16px !important;
+  flex: 1;
+  min-width: 150px;
+}
+
+.add-project-btn {
+  width: 50px !important;
+  height: 50px !important;
+  font-size: 24px !important;
+}
+
+/* Project Cards */
+.project-card-responsive {
+  transition: transform 0.2s;
+}
+
+.project-card-responsive:hover {
+  transform: translateY(-2px);
+}
+
+.project-name-responsive {
+  font-size: 1.1rem;
+  word-break: break-word;
+}
+
+.project-edit-input {
+  font-size: 1rem !important;
+}
+
+.project-assigned-text {
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.project-actions {
+  gap: 0.25rem;
+}
+
+.project-action-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  white-space: nowrap;
+}
+
+/* Users Table */
+.users-page-title {
+  font-size: 1.5rem;
+}
+
+.users-table {
+  font-size: 0.9rem;
+}
+
+.user-delete-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Modals */
+.modal-overlay-responsive {
+  padding: 15px !important;
+}
+
+.modal-content-responsive {
+  max-width: 380px;
+  width: 100%;
+}
+
+.modal-title-responsive {
+  font-size: 1.25rem;
+}
+
+.modal-input-responsive {
+  font-size: 16px;
+}
+
+.modal-btn-responsive {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  width: 100%;
+}
+
+.assign-users-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.assign-user-text {
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+/* ============================================
+   VIEW TASK PAGE RESPONSIVE STYLES
+   ============================================ */
+
+/* Task Header */
+.task-header-responsive {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.back-btn-responsive {
+  width: 35px !important;
+  height: 35px !important;
+  font-size: 18px !important;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-title-responsive {
+  font-size: 1.5rem;
+}
+
+.task-subtitle-responsive {
+  font-size: 12px !important;
+  word-break: break-word;
+}
+
+/* Search Container */
+.search-container-responsive {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.search-input-group-responsive {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.search-input-responsive {
+  font-size: 14px !important;
+}
+
+.task-add-btn-responsive {
+  width: 50px !important;
+  height: 50px !important;
+  font-size: 28px !important;
+  bottom: 20px !important;
+  right: 20px !important;
+}
+
+/* Timeline */
+.timeline-container-responsive {
+  padding: 0 0.5rem;
+}
+
+.task-timeline-responsive {
+  padding: 0;
+}
+
+.task-item-responsive {
+  margin-bottom: 1rem;
+}
+
+.timeline-date-responsive {
+  font-size: 0.75rem !important;
+  padding-right: 0.5rem !important;
+}
+
+.timeline-content-responsive {
+  padding: 0.5rem !important;
+}
+
+.task-card-paper {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.task-card-content {
+  gap: 0.5rem;
+}
+
+.task-card-left {
+  min-width: 150px;
+  flex: 1 1 auto;
+}
+
+.task-updated-by {
+  font-size: 0.75rem;
+  word-break: break-word;
+}
+
+.task-status-group {
+  gap: 0.25rem;
+}
+
+.task-status-label {
+  font-size: 0.75rem;
+}
+
+.task-status-select {
+  font-size: 0.85rem !important;
+  width: 140px !important;
+  min-width: 120px;
+}
+
+.task-text-responsive {
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.task-action-buttons {
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.task-action-btn {
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 0.75rem;
+}
+
+/* Add Task Box */
+.add-task-box-responsive {
+  max-width: 280px !important;
+  margin: 0 10px !important;
+}
+
+.add-task-title {
+  font-size: 1rem;
+}
+
+.add-task-input {
+  font-size: 14px;
+}
+
+.add-task-submit-btn {
+  font-size: 0.9rem;
+  padding: 0.5rem;
+}
+
+/* Task Modals */
+.task-modal-responsive {
+  max-width: 500px !important;
+  width: 100% !important;
+}
+
+.delete-confirm-text {
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+/* ============================================
+   LOGIN PAGE RESPONSIVE STYLES
+   ============================================ */
+
+.login-container-responsive {
+  padding: 15px !important;
+}
+
+.login-card-responsive {
+  padding: 1.5rem !important;
+}
+
+.login-title-responsive {
+  font-size: 1.5rem;
+}
+
+.login-button-responsive {
+  font-size: 1rem !important;
+  padding: 10px !important;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.google-logo-responsive {
+  width: 24px !important;
+  margin-right: 10px !important;
+  flex-shrink: 0;
+}
+
+.login-button-text {
+  white-space: nowrap;
+}
+
+/* ============================================
+   MEDIA QUERIES
+   ============================================ */
+
+/* Mobile Devices (max-width: 576px) */
+@media (max-width: 576px) {
+  .float-add-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 26px;
+    bottom: 20px;
+    right: 20px;
+  }
+
+  /* Dashboard */
+  .dashboard-title {
+    font-size: 1.5rem;
+    padding: 0.5rem 0;
+  }
+
+  .sidebar-responsive {
+    padding: 1rem !important;
+    border-bottom: 2px solid #ccc;
+  }
+
+  .user-avatar {
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 28px !important;
+  }
+
+  .sidebar-btn {
+    font-size: 12px;
+    padding: 6px;
+  }
+
+  .main-content-responsive {
+    padding: 0.75rem !important;
+  }
+
+  .create-project-title {
+    font-size: 1rem;
+  }
+
+  .project-input-responsive {
+    font-size: 14px !important;
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .add-project-btn {
+    width: 45px !important;
+    height: 45px !important;
+    font-size: 20px !important;
+    margin-left: 0 !important;
+  }
+
+  .project-name-responsive {
+    font-size: 1rem;
+  }
+
+  .project-action-btn {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .users-page-title {
+    font-size: 1.25rem;
+  }
+
+  .users-table {
+    font-size: 0.8rem;
+  }
+
+  .users-table th,
+  .users-table td {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .modal-content-responsive {
+    padding: 1rem !important;
+  }
+
+  .modal-title-responsive {
+    font-size: 1.1rem;
+  }
+
+  .modal-btn-responsive {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  /* View Task Page */
+  .task-title-responsive {
+    font-size: 1.25rem;
+  }
+
+  .task-subtitle-responsive {
+    font-size: 11px !important;
+  }
+
+  .search-input-group-responsive {
+    width: 100% !important;
+    margin-bottom: 0.5rem;
+  }
+
+  .task-add-btn-responsive {
+    width: 45px !important;
+    height: 45px !important;
+    font-size: 24px !important;
+    bottom: 15px !important;
+    right: 15px !important;
+  }
+
+  .timeline-date-responsive {
+    font-size: 0.7rem !important;
+    padding-right: 0.25rem !important;
+  }
+
+  .task-card-paper {
+    padding: 10px !important;
+  }
+
+  .task-status-select {
+    width: 120px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .task-text-responsive {
+    font-size: 0.9rem;
+  }
+
+  .task-action-btn {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 0.7rem;
+  }
+
+  .add-task-box-responsive {
+    max-width: calc(100% - 30px) !important;
+    width: calc(100% - 30px) !important;
+    right: 15px !important;
+    bottom: 15px !important;
+  }
+
+  .task-modal-responsive {
+    max-width: calc(100% - 30px) !important;
+  }
+
+  /* Login */
+  .login-card-responsive {
+    padding: 1.25rem !important;
+  }
+
+  .login-title-responsive {
+    font-size: 1.25rem;
+    margin-bottom: 1rem !important;
+  }
+
+  .login-button-responsive {
+    font-size: 0.9rem !important;
+    padding: 8px !important;
+  }
+
+  .google-logo-responsive {
+    width: 20px !important;
+    margin-right: 8px !important;
+  }
+}
+
+/* Tablet Devices (577px - 768px) */
+@media (min-width: 577px) and (max-width: 768px) {
+  .dashboard-title {
+    font-size: 1.75rem;
+  }
+
+  .sidebar-responsive {
+    padding: 1.5rem !important;
+  }
+
+  .user-avatar {
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 36px !important;
+  }
+
+  .sidebar-btn {
+    font-size: 13px;
+  }
+
+  .create-project-title {
+    font-size: 1.15rem;
+  }
+
+  .project-input-responsive {
+    font-size: 15px !important;
+  }
+
+  .add-project-btn {
+    width: 52px !important;
+    height: 52px !important;
+    font-size: 22px !important;
+  }
+
+  .project-name-responsive {
+    font-size: 1.15rem;
+  }
+
+  .users-page-title {
+    font-size: 1.4rem;
+  }
+
+  .task-title-responsive {
+    font-size: 1.4rem;
+  }
+
+  .task-status-select {
+    width: 135px !important;
+  }
+
+  .add-task-box-responsive {
+    max-width: 290px !important;
+  }
+
+  .login-title-responsive {
+    font-size: 1.4rem;
+  }
+
+  .login-button-responsive {
+    font-size: 1.05rem !important;
+  }
+}
+
+/* Small Desktop (769px - 992px) */
+@media (min-width: 769px) and (max-width: 992px) {
+  .dashboard-title {
+    font-size: 2rem;
+  }
+
+  .sidebar-responsive {
+    padding: 2rem !important;
+  }
+
+  .user-avatar {
+    width: 85px !important;
+    height: 85px !important;
+    font-size: 38px !important;
+  }
+
+  .sidebar-btn {
+    font-size: 13.5px;
+  }
+
+  .create-project-title {
+    font-size: 1.2rem;
+  }
+
+  .project-name-responsive {
+    font-size: 1.2rem;
+  }
+
+  .users-page-title {
+    font-size: 1.6rem;
+  }
+
+  .task-title-responsive {
+    font-size: 1.6rem;
+  }
+
+  .login-title-responsive {
+    font-size: 1.6rem;
+  }
+}
+
+/* Large Desktop (993px and above) */
+@media (min-width: 993px) {
+  .dashboard-title {
+    font-size: 2.25rem;
+  }
+
+  .user-avatar {
+    width: 90px !important;
+    height: 90px !important;
+    font-size: 40px !important;
+  }
+
+  .sidebar-btn {
+    font-size: 14px;
+  }
+
+  .create-project-title {
+    font-size: 1.25rem;
+  }
+
+  .project-name-responsive {
+    font-size: 1.25rem;
+  }
+
+  .users-page-title {
+    font-size: 1.75rem;
+  }
+
+  .task-title-responsive {
+    font-size: 1.75rem;
+  }
+
+  .login-title-responsive {
+    font-size: 1.75rem;
+  }
+}
+
+/* Extra Large Screens (1200px and above) */
+@media (min-width: 1200px) {
+  .dashboard-title {
+    font-size: 2.5rem;
+  }
+
+  .create-project-title {
+    font-size: 1.3rem;
+  }
+
+  .project-name-responsive {
+    font-size: 1.3rem;
+  }
+
+  .users-page-title {
+    font-size: 2rem;
+  }
+
+  .task-title-responsive {
+    font-size: 2rem;
+  }
+
+  .login-title-responsive {
+    font-size: 2rem;
+  }
+}
+
+/* Landscape Orientation for Mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .login-container-responsive {
+    padding: 10px !important;
+  }
+
+  .login-card-responsive {
+    padding: 1rem !important;
+  }
+
+  .task-header-responsive {
+    padding: 0.5rem !important;
+  }
+
+  .sidebar-responsive {
+    padding: 1rem !important;
+  }
+}
+

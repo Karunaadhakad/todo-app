@@ -3,7 +3,8 @@ import React, { useEffect, useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Swal from "sweetalert2";
 import { auth, db, secondaryAuth } from "./firebase";
-import { signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
+import "../App.css";
+import { signOut, onAuthStateChanged, createUserWithEmailAndPassword,signInWithEmailAndPassword,deleteUser as deleteAuthUser } from "firebase/auth";
 
 import {
   collection,
@@ -231,7 +232,15 @@ export default function Dashboard() {
   };
 
   const deleteUser = async (id) => {
-    const conf = window.confirm("Are you sure you want to delete this user?");
+    const conf = await Swal.fire({
+    title: "Are you sure?",
+    text: "You won't be able to revert this!",
+    icon: "warning",
+     toast: true, position: "top-end",  
+    showCancelButton: true,
+    confirmButtonText: "Yes, delete it!",
+    cancelButtonText: "Cancel",
+  });
     if (!conf) return;
     try {
       await deleteDoc(doc(db, "users", id));
@@ -251,15 +260,16 @@ export default function Dashboard() {
   return (
     <div className="container-fluid p-0">
       {/* HEADER */}
-      <div className="w-100 text-center py-3" style={{ backgroundColor: "#2a8c7b" }}>
-        <h1 className="text-white fw-bold display-4">Dashboard</h1>
+      <div className="w-100 text-center py-2 py-md-3" style={{ backgroundColor: "#2a8c7b" }}>
+      <h1 className="text-white fw-bold dashboard-title">Dashboard</h1>
+
       </div>
 
       <div className="row m-0">
         {/* SIDEBAR */}
-        <div className="col-12 col-md-3 p-4" style={{ backgroundColor: "#e8e8e8", minHeight: "auto" }}>
+        <div className="col-12 col-md-3 p-3 p-md-4 sidebar-responsive" style={{ backgroundColor: "#e8e8e8", minHeight: "auto" }}>
           <div
-            className="mb-4"
+            className="mb-3 mb-md-4 user-avatar"
             style={{
               width: "90px",
               height: "90px",
@@ -277,7 +287,7 @@ export default function Dashboard() {
             {firstLetter}
           </div>
 
-          <button className="btn w-100 mb-3 text-white fw-bold" style={{ backgroundColor: "#2a8c7b" }}>
+          <button className="btn w-100 mb-2 mb-md-3 text-white fw-bold sidebar-btn" style={{ backgroundColor: "#2a8c7b", fontSize: "14px", padding: "8px" }}>
             {userEmail}
           </button>
 
@@ -286,42 +296,43 @@ export default function Dashboard() {
           {userRole === "admin" && (
             <div style={{ marginTop: 12 }}>
               <button
-               className="btn w-100 mb-3 text-white fw-bold"
+               className="btn w-100 mb-2 mb-md-3 text-white fw-bold sidebar-btn"
                 onClick={() => setActivePage("users")}
-                style={{ cursor: "pointer", padding: "10px", backgroundColor: "#2a8c7b"}}
+                style={{ cursor: "pointer", padding: "10px", backgroundColor: "#2a8c7b", fontSize: "14px"}}
               >
                 👥 Users
               </button>
 
               <button
-               className="btn w-100 mb-3 text-white fw-bold"
+               className="btn w-100 mb-2 mb-md-3 text-white fw-bold sidebar-btn"
                 onClick={() => setActivePage("dashboard")}
-                style={{ cursor: "pointer", padding: "10px",backgroundColor: "#2a8c7b"  }}
+                style={{ cursor: "pointer", padding: "10px",backgroundColor: "#2a8c7b", fontSize: "14px"  }}
               >
                 📁 Projects
               </button>
-               <button className="btn w-100 fw-bold text-white" style={{ backgroundColor: "black" }} onClick={handleLogout}>
-            Logout
-          </button>
+               
             </div>
             
           )}
+          <button className="btn w-100 fw-bold text-white sidebar-btn" style={{ backgroundColor: "black", fontSize: "14px", padding: "10px" }} onClick={handleLogout}>
+            Logout
+          </button>
         </div>
 
         {/* MAIN SCREEN */}
-        <div className="col-12 col-md-9 p-4" style={{ minHeight: "100vh" }}>
+        <div className="col-12 col-md-9 p-3 p-md-4 main-content-responsive" style={{ minHeight: "100vh" }}>
           {/* Conditional pages */}
           {activePage === "dashboard" && (
             <>
               {/* CREATE PROJECT */}
               {userRole === "admin" && (
-                <div className="mb-4 p-3 shadow-sm bg-white">
-                  <h5 className="mb-3">Create New Project</h5>
+                <div className="mb-3 mb-md-4 p-2 p-md-3 shadow-sm bg-white create-project-box">
+                  <h5 className="mb-2 mb-md-3 create-project-title">Create New Project</h5>
 
-                  <div className="d-flex align-items-center mb-3">
+                  <div className="d-flex align-items-center mb-2 mb-md-3 create-project-input-group">
                     <input
                       type="text"
-                      className="form-control fs-5"
+                      className="form-control project-input-responsive"
                       placeholder="Project Name"
                       value={projectName}
                       onChange={(e) => setProjectName(e.target.value)}
@@ -329,13 +340,14 @@ export default function Dashboard() {
                     />
 
                     <button
-                      className="btn ms-3 text-white fs-4"
+                      className="btn ms-2 ms-md-3 text-white add-project-btn"
                       onClick={addProject}
                       style={{
                         backgroundColor: "#2a8c7b",
                         borderRadius: "50%",
                         width: "56px",
                         height: "56px",
+                        flexShrink: 0,
                       }}
                     >
                       +
@@ -345,25 +357,27 @@ export default function Dashboard() {
               )}
 
               {/* PROJECT LIST */}
-              <div className="row">
+              <div className="row g-3">
                 {projects.map((p) => (
-                  <div key={p.id} className="col-md-4 col-sm-6 mb-4">
+                  <div key={p.id} className="col-12 col-sm-6 col-lg-4 mb-3 mb-md-4">
+
                     <div
-                      className="card shadow-sm p-3"
+                      className="card shadow-sm p-2 p-md-3 project-card-responsive"
                       style={{
                         borderRadius: "12px",
-                        minHeight: "200px",
+                        minHeight: "auto",
                         borderLeft: "6px solid #2a8c7b",
+                        position: "relative"
                       }}
                     >
                       {editId === p.id ? (
-                        <input className="form-control fs-5 mb-2" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus />
+                        <input className="form-control project-edit-input mb-2" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus />
                       ) : (
-                        <h5 style={{ fontFamily: "serif" }}>{p.name}</h5>
+                        <h5 className="project-name-responsive" style={{ fontFamily: "serif" }}>{p.name}</h5>
                       )}
 
                       {userRole === "admin" && (
-                        <p className="text-muted mt-2">
+                        <p className="text-muted mt-2 project-assigned-text">
                           <strong>Assigned:</strong>{" "}
                           {p.users?.map((uid) => {
                             const user = allUsers.find((u) => u.id === uid);
@@ -371,39 +385,57 @@ export default function Dashboard() {
                           }).join(", ") || "None"}
                         </p>
                       )}
-
-                      <div className="mt-auto d-flex justify-content-between">
+                     
+                      {userRole === "admin" && (
+                    <div className="mt-auto d-flex flex-wrap justify-content-between gap-1 project-actions" 
+                      style={{
+                        position: "absolute",
+                        top: "10px",
+                        right: "10px",
+                        display: "flex",
+                        gap: "6px",
+                         zIndex: 10
+                          }}>
                         {editId === p.id ? (
-                          <button className="btn btn-sm btn-primary" onClick={() => updateProject(p.id)}>
+                          <button className="btn btn-sm btn-primary project-action-btn" onClick={() => updateProject(p.id)}>
                             Save
                           </button>
                         ) : (
+                          
                           <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() => {
-                              setEditId(p.id);
-                              setEditName(p.name || "");
-                            }}
+                             className=" text-end btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center task-action-btn"
+                             onClick={() => {setEditId(p.id);setEditName(p.name || ""); }}
+                             style={{ borderRadius: "50%", width: "32px",height: "32px", padding: 0,}}
+                             title="Edit"
                           >
-                            Edit
+                           <i className="bi bi-pencil-square"></i>
                           </button>
+                          
                         )}
-
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => deleteProject(p.id)}>
-                          Delete
-                        </button>
-
-                        {userRole === "admin" && (
-                          <button className="btn btn-sm btn-warning" onClick={() => openAssignModal(p)}>
+                    
+                        <button
+                             className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center task-action-btn"
+                             onClick={() => deleteProject(p.id)}
+                             style={{borderRadius: "50%", width: "32px", height: "32px", padding: 0, }}
+                             title="Delete"
+                         >
+                             <i className="bi bi-trash3"></i>
+                         </button>
+                        
+                          <button className="btn btn-sm btn-warning project-action-btn" onClick={() => openAssignModal(p)}>
                             Assign
                           </button>
+                          
+                           </div>
                         )}
-
-                        <button className="btn btn-sm text-white" style={{ backgroundColor: "#2a8c7b" }} onClick={() => handleView(p.id, p.name)}>
-                          View
+                        <div className="mt-auto d-flex flex-wrap justify-content-between gap-1 project-actions">
+                        <button className="btn btn-sm text-white project-action-btn" style={{ backgroundColor: "#2a8c7b" }} onClick={() => handleView(p.id, p.name)}>
+                          View Task
                         </button>
+                        
                       </div>
-                    </div>
+                     
+                   </div>
                   </div>
                 ))}
 
@@ -414,37 +446,41 @@ export default function Dashboard() {
 
           {/* USERS PAGE */}
           {activePage === "users" && (
-            <div className="p-3">
-              <h3 className="mb-3">All Users</h3>
+            <div className="p-2 p-md-3">
+              <h3 className="mb-2 mb-md-3 users-page-title">All Users</h3>
 
               {allUsers.length === 0 ? (
                 <p>No users found.</p>
               ) : (
-                <table className="table table-bordered">
-                  <thead>
-                    <tr>
-                      <th>Username</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {allUsers.map((user) => (
-                      <tr key={user.id}>
-                        <td>{user.username}</td>
-                        <td>{user.email}</td>
-                        <td>{user.role}</td>
-                        <td>
-                          <button className="btn btn-danger btn-sm" onClick={() => deleteUser(user.id)}>
-                            Delete
-                          </button>
-                        </td>
+                <div className="table-responsive">
+                  <table className="table table-bordered users-table">
+                    <thead>
+                      <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+
+                    <tbody>
+                      {allUsers
+                      .filter((user) => user.role !== "admin")
+                      .map((user) => (
+                        <tr key={user.id}>
+                          <td>{user.username}</td>
+                          <td>{user.email}</td>
+                          <td>{user.role}</td>
+                          <td>
+                            <button className="btn btn-danger btn-sm user-delete-btn" onClick={() => deleteUser(user.id)}>
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
@@ -453,47 +489,35 @@ export default function Dashboard() {
 
       {/* ADD USER FLOAT BUTTON */}
       {userRole === "admin" && (
-        <button
-          onClick={() => setShowUserModal(true)}
-          style={{
-            position: "fixed",
-            bottom: "25px",
-            right: "25px",
-            width: "60px",
-            height: "60px",
-            borderRadius: "50%",
-            backgroundColor: "#2a8c7b",
-            color: "white",
-            fontSize: "32px",
-            border: "none",
-            boxShadow: "0px 4px 10px rgba(0,0,0,0.3)",
-            zIndex: 9999,
-          }}
-        >
-          +
-        </button>
+       <button
+  className="float-add-btn"
+  onClick={() => setShowUserModal(true)}
+>
+  +
+</button>
+
       )}
 
       {/* ADD USER MODAL */}
       {showUserModal && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ background: "rgba(0,0,0,0.5)", zIndex: 10000 }}>
-          <div className="bg-white p-4 rounded shadow" style={{ width: "380px" }}>
-            <h4 className="mb-3">Add New User</h4>
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center modal-overlay-responsive" style={{ background: "rgba(0,0,0,0.5)", zIndex: 10000, padding: "15px" }}>
+          <div className="bg-white p-3 p-md-4 rounded shadow modal-content-responsive" style={{ width: "100%", maxWidth: "380px" }}>
+            <h4 className="mb-2 mb-md-3 modal-title-responsive">Add New User</h4>
 
-            <input type="text" className="form-control mb-2" placeholder="Username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
-            <input type="email" className="form-control mb-2" placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+            <input type="text" className="form-control mb-2 modal-input-responsive" placeholder="Username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
+            <input type="email" className="form-control mb-2 modal-input-responsive" placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
 
-            <select className="form-control mb-3" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
+            <select className="form-control mb-3 modal-input-responsive" value={newRole} onChange={(e) => setNewRole(e.target.value)}>
               <option value="user">User</option>
               <option value="admin">Admin</option>
             </select>
 
-            <div className="text-end">
-              <button className="btn btn-secondary me-2" onClick={() => setShowUserModal(false)}>
+            <div className="text-end d-flex flex-column flex-sm-row justify-content-end gap-2">
+              <button className="btn btn-secondary modal-btn-responsive" onClick={() => setShowUserModal(false)}>
                 Cancel
               </button>
 
-              <button className="btn btn-success" onClick={addNewUser}>
+              <button className="btn btn-success modal-btn-responsive" onClick={addNewUser}>
                 Add
               </button>
             </div>
@@ -503,24 +527,26 @@ export default function Dashboard() {
 
       {/* ASSIGN MODAL */}
       {showAssignModal && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ background: "rgba(0,0,0,0.5)", zIndex: 99999 }}>
-          <div className="bg-white p-4 rounded shadow" style={{ width: "380px" }}>
-            <h4 className="mb-3">Assign Users</h4>
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center modal-overlay-responsive" style={{ background: "rgba(0,0,0,0.5)", zIndex: 99999, padding: "15px" }}>
+          <div className="bg-white p-3 p-md-4 rounded shadow modal-content-responsive" style={{ width: "100%", maxWidth: "380px" }}>
+            <h4 className="mb-2 mb-md-3 modal-title-responsive">Assign Users</h4>
 
-            <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-              {allUsers.map((u) => (
+            <div className="assign-users-list" style={{ maxHeight: "200px", overflowY: "auto" }}>
+              {allUsers
+               .filter((u) => u.role !== "admin")
+              .map((u) => (
                 <div key={u.id} className="d-flex align-items-center mb-2">
                   <input type="checkbox" checked={assignedUsers.includes(u.id)} onChange={() => toggleUser(u.id)} />
-                  <span className="ms-2">{u.username || u.email}</span>
+                  <span className="ms-2 assign-user-text">{u.username || u.email}</span>
                 </div>
               ))}
             </div>
 
-            <div className="text-end mt-3">
-              <button className="btn btn-secondary me-2" onClick={() => setShowAssignModal(false)}>
+            <div className="text-end mt-3 d-flex flex-column flex-sm-row justify-content-end gap-2">
+              <button className="btn btn-secondary modal-btn-responsive" onClick={() => setShowAssignModal(false)}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={saveAssignedUsers}>
+              <button className="btn btn-primary modal-btn-responsive" onClick={saveAssignedUsers}>
                 Save
               </button>
             </div>

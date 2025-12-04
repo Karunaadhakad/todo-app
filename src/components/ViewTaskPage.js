@@ -107,7 +107,7 @@ const addTask = async () => {
     await updateDoc(ref, {
       text: editingTask.text,
       status: editingTask.status,
-      updatedBy: auth.currentUser?.email ?? editingTask.updatedBy ?? "Guest",
+      updatedBy: auth.currentUser?.displayName ?? editingTask.updatedBy ?? "Guest",
       updatedAt: serverTimestamp(),
     });
     setShowEditModal(false);
@@ -165,31 +165,31 @@ const addTask = async () => {
     <div className="container-fluid p-0">
       {/* Header */}
       <div
-        className="w-100 d-flex align-items-center justify-content-between px-3 py-3 mb-4"
+        className="w-100 d-flex align-items-center justify-content-between px-2 px-md-3 py-2 py-md-3 mb-3 mb-md-4 task-header-responsive"
         style={{ backgroundColor: "#2a8c7b" }}
       >
         <button
-          className="btn btn-light"
-          style={{ borderRadius: "50%" }}
+          className="btn btn-light back-btn-responsive"
+          style={{ borderRadius: "50%", width: "35px", height: "35px", padding: 0, fontSize: "18px" }}
           onClick={() => window.history.back()}
         >
           ←
         </button>
 
-        <div className="text-center">
-          <h1 className="text-white  fw-bold ">TASKS</h1>
-          <h2 className="text-white" style={{ fontSize: "14px" }}>
+        <div className="text-center flex-grow-1">
+          <h1 className="text-white fw-bold task-title-responsive">TASKS</h1>
+          <h2 className="text-white task-subtitle-responsive" style={{ fontSize: "14px" }}>
             {projectName}
           </h2>
         </div>
 
-        <div style={{ width: "40px" }} />
+        <div className="back-btn-responsive" style={{ width: "35px" }} />
       </div>
 
       {/* Add + Search */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-3 mb-md-4 px-2 px-md-0 search-container-responsive">
         {/* Floating Add Button */}
-      <button onClick={() => setShowAddBox(true)} className="btn btn-success shadow-lg"
+      <button onClick={() => setShowAddBox(true)} className="btn btn-success shadow-lg task-add-btn-responsive"
        style={{
                  position: "fixed",
                  bottom: "25px",
@@ -204,14 +204,14 @@ const addTask = async () => {
 
 
         <div
-  className="input-group shadow-sm ms-auto"
+  className="input-group shadow-sm ms-auto search-input-group-responsive"
   style={{
-    width: "35%",
+    width: "100%",
     maxWidth: "300px",
   }}
 >
   <input
-    className="form-control"
+    className="form-control search-input-responsive"
     placeholder="Search status"
     value={search}
     onChange={(e) => setSearch(e.target.value)}
@@ -241,21 +241,22 @@ const addTask = async () => {
 
       {/* MUI Timeline */}
     
-<div>
-  <Timeline position="right">   {/* force items to the right */}
+<div className="timeline-container-responsive px-2 px-md-0">
+  <Timeline position="right" className="task-timeline-responsive">   {/* force items to the right */}
     {filtered.length === 0 ? (
-      <div style={{ padding: 24 }}>
+      <div className="px-2 px-md-4" style={{ padding: "24px 0" }}>
         <p className="text-center text-muted mt-4">No tasks found.</p>
       </div>
     ) : (
       filtered.map((t) => (
-        <TimelineItem key={t.id}>
+        <TimelineItem key={t.id} className="task-item-responsive">
 
           {/* LEFT SIDE — ONLY DATE */}
           <TimelineOppositeContent
             align="right"
             sx={{ m: "auto 0", fontWeight: 600 }}
             color="text.secondary"
+            className="timeline-date-responsive"
           >
             {formatTs(t.updatedAt)}
           </TimelineOppositeContent>
@@ -266,26 +267,26 @@ const addTask = async () => {
           </TimelineSeparator>
 
           {/* RIGHT SIDE — COMPLETE TASK CARD */}
-          <TimelineContent sx={{ py: "20px", px: 2 }}>
-            <Paper elevation={2} style={{ padding: 14, borderRadius: 10, maxWidth: "330px", }}>
-              <div className="d-flex align-items-start justify-content-between">
+          <TimelineContent sx={{ py: "20px", px: 2 }} className="timeline-content-responsive">
+            <Paper elevation={2} className="task-card-paper" style={{ padding: 14, borderRadius: 10, maxWidth: "330px", width: "100%" }}>
+              <div className="d-flex align-items-start justify-content-between flex-wrap task-card-content">
 
                 {/* LEFT — TEXT & STATUS */}
-                <div style={{ maxWidth: "75%" }}>
-                  <div className="small text-muted mb-2">
+                <div className="task-card-left" style={{ maxWidth: "75%", flex: "1 1 auto", minWidth: "200px" }}>
+                  <div className="small text-muted mb-2 task-updated-by">
                     Updated By: <strong>{t.updatedBy}</strong>
                   </div>
 
                   {/* status dropdown inline update */}
-                 <div className="d-flex align-items-center mb-2">
-  <label className="me-2 small mb-0">Status:</label>
+                 <div className="d-flex align-items-center mb-2 flex-wrap task-status-group">
+  <label className="me-2 small mb-0 task-status-label">Status:</label>
 
   <select
-    className="form-select form-select-sm"
+    className="form-select form-select-sm task-status-select"
     value={t.status}
     onChange={async (e) => {
       const user = auth.currentUser;
-      const by = user?.email ?? "Guest";
+       const by = user?.displayName?.trim()? user.displayName: user?.email ?? "Guest";
       const ref = doc(db, "projects", projectId, "tasks", t.id);
       await updateDoc(ref, {
         status: e.target.value,
@@ -315,15 +316,15 @@ const addTask = async () => {
 </div>
 
 
-                  <h5 className="card-title mb-0">{t.text}</h5>
+                  <h5 className="card-title mb-0 task-text-responsive">{t.text}</h5>
                 </div>
 
                 {/* RIGHT — ACTION BUTTONS */}
-                <div className="text-end d-flex">
+                <div className="text-end d-flex gap-1 task-action-buttons">
 
   {/* EDIT ICON */}
   <button
-    className="btn btn-sm btn-outline-primary mb-2 d-flex align-items-center justify-content-center"
+    className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center task-action-btn"
     onClick={() => openEditModal(t)}
     style={{
       borderRadius: "50%",
@@ -335,10 +336,9 @@ const addTask = async () => {
   >
     <i className="bi bi-pencil-square"></i>
   </button>
- &nbsp;
   {/* DELETE ICON */}
   <button
-    className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
+    className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center task-action-btn"
     onClick={() => confirmDelete(t.id)}
     style={{
       borderRadius: "50%",
@@ -365,20 +365,22 @@ const addTask = async () => {
 </div>
 {showAddBox && (
   <div
-    className="card shadow"
+    className="card shadow add-task-box-responsive"
     style={{
       position: "fixed",
       bottom: "20px",
       right: "20px",
-      width: "300px",
+      width: "100%",
+      maxWidth: "300px",
       zIndex: 1000,
       padding: "15px",
       borderRadius: "12px",
       animation: "slideUp 0.3s ease",
+      margin: "0 15px",
     }}
   >
     <div className="d-flex justify-content-between align-items-center mb-2">
-      <h6 className="m-0">Add Task</h6>
+      <h6 className="m-0 add-task-title">Add Task</h6>
       <button
         className="btn-close"
         onClick={() => setShowAddBox(false)}
@@ -388,12 +390,12 @@ const addTask = async () => {
     <input
       value={taskText}
       onChange={(e) => setTaskText(e.target.value)}
-      className="form-control mb-3"
+      className="form-control mb-3 add-task-input"
       placeholder="Enter task"
     />
 
     <button
-      className="btn btn-success w-100"
+      className="btn btn-success w-100 add-task-submit-btn"
       onClick={() => {
         addTask();
         setShowAddBox(false);
@@ -407,11 +409,11 @@ const addTask = async () => {
 
       {/* ---------- Edit Modal ---------- */}
       {showEditModal && editingTask && (
-        <div className="modal show d-block" tabIndex="-1" role="dialog">
-          <div className="modal-dialog modal-dialog-centered" role="document">
+        <div className="modal show d-block modal-overlay-responsive" tabIndex="-1" role="dialog" style={{ padding: "15px" }}>
+          <div className="modal-dialog modal-dialog-centered task-modal-responsive" role="document" style={{ maxWidth: "500px", width: "100%" }}>
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Edit Task</h5>
+                <h5 className="modal-title modal-title-responsive">Edit Task</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -427,7 +429,7 @@ const addTask = async () => {
                 <div className="mb-3">
                   <label className="form-label">Task Text</label>
                   <input
-                    className="form-control"
+                    className="form-control modal-input-responsive"
                     value={editingTask.text}
                     onChange={(e) =>
                       setEditingTask({ ...editingTask, text: e.target.value })
@@ -437,9 +439,9 @@ const addTask = async () => {
 
               </div>
 
-              <div className="modal-footer">
+              <div className="modal-footer d-flex flex-column flex-sm-row justify-content-end gap-2">
                 
-                <button className="btn btn-success" onClick={saveEdit}>
+                <button className="btn btn-success modal-btn-responsive" onClick={saveEdit}>
                   Save 
                 </button>
               </div>
@@ -450,19 +452,19 @@ const addTask = async () => {
 
       {/* ---------- Delete Confirmation Modal ---------- */}
       {showDeleteConfirm && (
-        <div className="modal show d-block" tabIndex="-1" role="dialog">
-          <div className="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div className="modal show d-block modal-overlay-responsive" tabIndex="-1" role="dialog" style={{ padding: "15px" }}>
+          <div className="modal-dialog modal-sm modal-dialog-centered task-modal-responsive" role="document" style={{ maxWidth: "400px", width: "100%" }}>
             <div className="modal-content">
               <div className="modal-body">
-                <p>Are you sure you want to delete this task?</p>
-                <div className="d-flex justify-content-end">
+                <p className="delete-confirm-text">Are you sure you want to delete this task?</p>
+                <div className="d-flex flex-column flex-sm-row justify-content-end gap-2">
                   <button
-                    className="btn btn-secondary me-2"
+                    className="btn btn-secondary modal-btn-responsive"
                     onClick={() => setShowDeleteConfirm(false)}
                   >
                     Cancel
                   </button>
-                  <button className="btn btn-danger" onClick={doDelete}>
+                  <button className="btn btn-danger modal-btn-responsive" onClick={doDelete}>
                     Delete
                   </button>
                 </div>

@@ -43,6 +43,7 @@ export default function Login() {
 
   return (
     <div
+      className="login-container-responsive"
       style={{
         minHeight: "100vh",
         background: "linear-gradient(135deg, #1f4037, #99f2c8)",
@@ -53,7 +54,7 @@ export default function Login() {
       }}
     >
       <div
-        className="p-5 shadow-lg"
+        className="p-4 p-md-5 shadow-lg login-card-responsive"
         style={{
           width: "100%",
           maxWidth: "450px",
@@ -65,13 +66,13 @@ export default function Login() {
           animation: "fadeIn 0.8s ease",
         }}
       >
-        <h2 className="fw-bold text-center mb-4">Login</h2>
+        <h2 className="fw-bold text-center mb-3 mb-md-4 login-title-responsive">Login</h2>
 
         <div className="text-center">
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="btn w-100 d-flex align-items-center justify-content-center fw-bold"
+            className="btn w-100 d-flex align-items-center justify-content-center fw-bold login-button-responsive"
             style={{
               background: "rgba(255,255,255,0.9)",
               border: "none",
@@ -90,9 +91,10 @@ export default function Login() {
                 <img
                   src={googleLogo}
                   alt="Google"
+                  className="google-logo-responsive"
                   style={{ width: "30px", marginRight: "15px"}}
                 />
-                Sign in with Google
+                <span className="login-button-text">Sign in with Google</span>
               </>
             ) : (
               <div
