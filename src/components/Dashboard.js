@@ -17,6 +17,7 @@ import {
   getDoc,
   query,
   where,
+  orderBy,
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
@@ -37,6 +38,7 @@ export default function Dashboard() {
   const [projects, setProjects] = useState([]);
   const [editId, setEditId] = useState(null);
   const [editName, setEditName] = useState("");
+  const [isMobile, setIsMobile] = useState(false); // Check if mobile/tablet screen (max-width: 992px)
 
   // ASSIGN MODAL
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -49,9 +51,25 @@ export default function Dashboard() {
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState("user");
+  const [newUserInput, setNewUserInput] = useState(""); // For WhatsApp-style input
 
   // UI page control
   const [activePage, setActivePage] = useState("dashboard");
+
+  // NOTIFICATIONS STATE
+  const [notifications, setNotifications] = useState([]);
+  const [projectNotificationCounts, setProjectNotificationCounts] = useState({});
+
+  // Check if mobile/tablet screen (max-width: 992px)
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 992);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // AUTH LISTENER
   useEffect(() => {
@@ -103,6 +121,57 @@ export default function Dashboard() {
   useEffect(() => {
     if (activePage === "users") fetchAllUsers();
   }, [activePage]);
+
+  // LOAD NOTIFICATIONS PER PROJECT (realtime) - For badge counts
+  // Query: projectId == project.id && seenBy array does NOT include current user UID
+  // Using where("projectId", "==", project.id) and client-side filter for seenBy
+  useEffect(() => {
+    if (!userUID || projects.length === 0) {
+      setProjectNotificationCounts({});
+      return;
+    }
+
+    const notificationsRef = collection(db, "notifications");
+    const unsubscribers = [];
+
+    // Create a listener for each project
+    projects.forEach((project) => {
+      // Query: where("projectId", "==", project.id)
+      // Filter client-side: where seenBy does NOT include current user UID
+      const q = query(
+        notificationsRef,
+        where("projectId", "==", project.id)
+      );
+
+      const unsub = onSnapshot(
+        q,
+        (snap) => {
+          // Filter notifications where seenBy does NOT include current user UID
+          // This ignores self notifications (creator already in seenBy) and unseen notifications
+          const unseenNotifications = snap.docs.filter((docSnap) => {
+            const data = docSnap.data();
+            const seenBy = data.seenBy || [];
+            return !seenBy.includes(userUID); // Badge query ignores self notifs using seenBy
+          });
+          
+          const count = unseenNotifications.length;
+          setProjectNotificationCounts((prev) => ({
+            ...prev,
+            [project.id]: count,
+          }));
+        },
+        (err) => {
+          console.error(`Notification snapshot error for project ${project.id}:`, err);
+        }
+      );
+
+      unsubscribers.push(unsub);
+    });
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }, [userUID, projects]);
 
   // FUNCTIONS
 
@@ -326,34 +395,106 @@ export default function Dashboard() {
             <>
               {/* CREATE PROJECT */}
               {userRole === "admin" && (
-                <div className="mb-3 mb-md-4 p-2 p-md-3 shadow-sm bg-white create-project-box">
-                  <h5 className="mb-2 mb-md-3 create-project-title">Create New Project</h5>
+                <>
+                  {/* Desktop View */}
+                  {!isMobile && (
+                    <div className="mb-3 mb-md-4 p-2 p-md-3 shadow-sm bg-white create-project-box">
+                      <h5 className="mb-2 mb-md-3 create-project-title">Create New Project</h5>
 
-                  <div className="d-flex align-items-center mb-2 mb-md-3 create-project-input-group">
-                    <input
-                      type="text"
-                      className="form-control project-input-responsive"
-                      placeholder="Project Name"
-                      value={projectName}
-                      onChange={(e) => setProjectName(e.target.value)}
-                      style={{ border: "2px solid #2a8c7b" }}
-                    />
+                      <div className="d-flex align-items-center mb-2 mb-md-3 create-project-input-group">
+                        <input
+                          type="text"
+                          className="form-control project-input-responsive"
+                          placeholder="Project Name"
+                          value={projectName}
+                          onChange={(e) => setProjectName(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              addProject();
+                            }
+                          }}
+                          style={{ border: "2px solid #2a8c7b" }}
+                        />
 
-                    <button
-                      className="btn ms-2 ms-md-3 text-white add-project-btn"
-                      onClick={addProject}
+                        <button
+                          className="btn ms-2 ms-md-3 text-white add-project-btn"
+                          onClick={addProject}
+                          style={{
+                            backgroundColor: "#2a8c7b",
+                            borderRadius: "50%",
+                            width: "56px",
+                            height: "56px",
+                            flexShrink: 0,
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mobile View - WhatsApp-style Bottom Input */}
+                  {isMobile && (
+                    <div 
+                      className="whatsapp-input-bar"
                       style={{
-                        backgroundColor: "#2a8c7b",
-                        borderRadius: "50%",
-                        width: "56px",
-                        height: "56px",
-                        flexShrink: 0,
+                        position: "fixed",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        backgroundColor: "#f0f0f0",
+                        padding: "8px 12px",
+                        borderTop: "1px solid #e0e0e0",
+                        zIndex: 1000,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        boxShadow: "0 -2px 10px rgba(0,0,0,0.1)"
                       }}
                     >
-                      +
-                    </button>
-                  </div>
-                </div>
+                      <input
+                        type="text"
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            addProject();
+                          }
+                        }}
+                        className="form-control whatsapp-input-field"
+                        placeholder="Type project name..."
+                        style={{
+                          flex: 1,
+                          borderRadius: "20px",
+                          border: "1px solid #e0e0e0",
+                          padding: "10px 16px",
+                          fontSize: "15px",
+                          backgroundColor: "white",
+                          outline: "none"
+                        }}
+                      />
+                      <button
+                        onClick={addProject}
+                        className="btn btn-success whatsapp-send-btn"
+                        disabled={!projectName.trim()}
+                        style={{
+                          width: "44px",
+                          height: "44px",
+                          borderRadius: "50%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: 0,
+                          backgroundColor: projectName.trim() ? "#2a8c7b" : "#ccc",
+                          border: "none",
+                          cursor: projectName.trim() ? "pointer" : "not-allowed"
+                        }}
+                      >
+                        <i className="bi bi-send-fill" style={{ fontSize: "18px", color: "white" }}></i>
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* PROJECT LIST */}
@@ -421,18 +562,56 @@ export default function Dashboard() {
                          >
                              <i className="bi bi-trash3"></i>
                          </button>
-                        
-                          <button className="btn btn-sm btn-warning project-action-btn" onClick={() => openAssignModal(p)}>
-                            Assign
-                          </button>
                           
                            </div>
                         )}
                         <div className="mt-auto d-flex flex-wrap justify-content-between gap-1 project-actions">
-                        <button className="btn btn-sm text-white project-action-btn" style={{ backgroundColor: "#2a8c7b" }} onClick={() => handleView(p.id, p.name)}>
-                          View Task
-                        </button>
-                        
+                        <div className="d-flex gap-1">
+                          <button 
+                            className="btn btn-sm text-white project-action-btn" 
+                            style={{ backgroundColor: "#2a8c7b", position: "relative" }} 
+                            onClick={() => handleView(p.id, p.name)}
+                          >
+                            Chat
+                            {/* Badge count on Chat button - top-left corner */}
+                            {projectNotificationCounts[p.id] > 0 && (
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  top: "-6px",
+                                  left: "-6px",
+                                  backgroundColor: "#dc3545",
+                                  color: "white",
+                                  borderRadius: "50%",
+                                  minWidth: "18px",
+                                  height: "18px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "10px",
+                                  fontWeight: "600",
+                                  zIndex: 10,
+                                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                                  padding: projectNotificationCounts[p.id] > 9 ? "0 5px" : "0",
+                                }}
+                              >
+                                {projectNotificationCounts[p.id] > 99 ? "99+" : projectNotificationCounts[p.id]}
+                              </span>
+                            )}
+                          </button>
+                          <button 
+                            className="btn btn-sm text-white project-action-btn" 
+                            style={{ backgroundColor: "#2a8c7b" }} 
+                            onClick={() => navigate(`/board/${p.id}/${encodeURIComponent(p.name)}`)}
+                          >
+                            View Board
+                          </button>
+                          {userRole === "admin" && (
+                            <button className="btn btn-sm btn-warning project-action-btn" onClick={() => openAssignModal(p)}>
+                              Assign
+                            </button>
+                          )}
+                        </div>
                       </div>
                      
                    </div>
@@ -446,7 +625,15 @@ export default function Dashboard() {
 
           {/* USERS PAGE */}
           {activePage === "users" && (
-            <div className="p-2 p-md-3">
+            <div 
+              className="p-2 p-md-3 users-page-container"
+              style={{
+                maxHeight: userRole === "admin" ? "calc(100vh - 200px)" : "calc(100vh - 150px)",
+                overflowY: "auto",
+                overflowX: "hidden",
+                paddingBottom: userRole === "admin" ? "70px" : "20px"
+              }}
+            >
               <h3 className="mb-2 mb-md-3 users-page-title">All Users</h3>
 
               {allUsers.length === 0 ? (
@@ -484,13 +671,101 @@ export default function Dashboard() {
               )}
             </div>
           )}
+
+          {/* WhatsApp-style Bottom Input Bar for Users Page - Only for Admin and Mobile/Tablet (max-width: 992px) */}
+          {activePage === "users" && userRole === "admin" && isMobile && (
+            <div 
+              className="whatsapp-input-bar"
+              style={{
+                position: "fixed",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: "white",
+                borderTop: "1px solid #ddd",
+                padding: "8px",
+                zIndex: 1000,
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 -2px 10px rgba(0,0,0,0.1)"
+              }}
+            >
+              <input
+                type="text"
+                value={newUserInput}
+                onChange={(e) => setNewUserInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && newUserInput.trim()) {
+                    // Parse input: format "username email" or "email"
+                    const parts = newUserInput.trim().split(/\s+/);
+                    if (parts.length >= 2) {
+                      setNewUsername(parts[0]);
+                      setNewEmail(parts.slice(1).join(' '));
+                    } else if (parts.length === 1) {
+                      // If only one part, assume it's email
+                      setNewEmail(parts[0]);
+                      setNewUsername(parts[0].split('@')[0]); // Use email prefix as username
+                    }
+                    setShowUserModal(true);
+                    setNewUserInput("");
+                  }
+                }}
+                className="form-control whatsapp-input-field"
+                placeholder="Add user…"
+                style={{
+                  flex: 1,
+                  borderRadius: "20px",
+                  border: "1px solid #e0e0e0",
+                  padding: "10px 16px",
+                  fontSize: "15px",
+                  backgroundColor: "white",
+                  outline: "none"
+                }}
+              />
+              <button
+                onClick={() => {
+                  if (newUserInput.trim()) {
+                    // Parse input: format "username email" or "email"
+                    const parts = newUserInput.trim().split(/\s+/);
+                    if (parts.length >= 2) {
+                      setNewUsername(parts[0]);
+                      setNewEmail(parts.slice(1).join(' '));
+                    } else if (parts.length === 1) {
+                      // If only one part, assume it's email
+                      setNewEmail(parts[0]);
+                      setNewUsername(parts[0].split('@')[0]); // Use email prefix as username
+                    }
+                    setShowUserModal(true);
+                    setNewUserInput("");
+                  }
+                }}
+                className="btn btn-success whatsapp-send-btn"
+                disabled={!newUserInput.trim()}
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 0,
+                  backgroundColor: newUserInput.trim() ? "#2a8c7b" : "#ccc",
+                  border: "none",
+                  cursor: newUserInput.trim() ? "pointer" : "not-allowed"
+                }}
+              >
+                <i className="bi bi-plus-lg" style={{ fontSize: "20px", color: "white" }}></i>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ADD USER FLOAT BUTTON */}
-      {userRole === "admin" && (
+      {/* ADD USER FLOAT BUTTON - Hidden on mobile/tablet (max-width 992px) */}
+      {userRole === "admin" && activePage !== "users" && (
        <button
-  className="float-add-btn"
+  className="float-add-btn float-add-btn-desktop"
   onClick={() => setShowUserModal(true)}
 >
   +
@@ -513,7 +788,13 @@ export default function Dashboard() {
             </select>
 
             <div className="text-end d-flex flex-column flex-sm-row justify-content-end gap-2">
-              <button className="btn btn-secondary modal-btn-responsive" onClick={() => setShowUserModal(false)}>
+              <button className="btn btn-secondary modal-btn-responsive" onClick={() => {
+                setShowUserModal(false);
+                setNewUsername("");
+                setNewEmail("");
+                setNewRole("user");
+                setNewUserInput("");
+              }}>
                 Cancel
               </button>
 
@@ -553,6 +834,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Notification Panel - Removed bell icon, using badges on project cards only */}
     </div>
   );
 }

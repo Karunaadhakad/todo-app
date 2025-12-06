@@ -210,18 +210,40 @@
   justify-content: center;
 }
 
+/* Global Search Bar in Header */
+.global-search-wrapper {
+  flex: 0 1 auto;
+  min-width: 150px;
+  max-width: 300px;
+  width: 100%;
+  display: flex !important;
+  flex-direction: column;
+}
+
+.global-search-container {
+  width: 100%;
+  position: relative;
+  display: flex !important;
+}
+
+.global-search-input {
+  font-size: 13px !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
 .task-title-responsive {
   font-size: 1.5rem;
 }
 
 .task-subtitle-responsive {
-  font-size: 12px !important;
+    font-size: 12px !important;
   word-break: break-word;
-}
-
+  }
+  
 /* Search Container */
 .search-container-responsive {
-  flex-wrap: wrap;
+    flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -242,13 +264,147 @@
   right: 20px !important;
 }
 
-/* Timeline */
+/* WhatsApp-style Bottom Input Bar - Hidden on Desktop (min-width: 992px) */
+.whatsapp-input-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #f0f0f0;
+  padding: 8px 12px;
+  border-top: 1px solid #e0e0e0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+/* Hide WhatsApp input bar on desktop (min-width: 992px) */
+@media (min-width: 992px) {
+  .whatsapp-input-bar {
+    display: none !important;
+  }
+}
+
+.whatsapp-input-field {
+  flex: 1;
+  border-radius: 20px;
+  border: 1px solid #e0e0e0;
+  padding: 10px 16px;
+  font-size: 15px;
+  background-color: white;
+  outline: none;
+}
+
+.whatsapp-input-field:focus {
+  border-color: #2a8c7b;
+  box-shadow: 0 0 0 2px rgba(42, 140, 123, 0.1);
+}
+
+.whatsapp-send-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  transition: background-color 0.2s;
+}
+
+.whatsapp-send-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Timeline Wrapper - Scrollable Message List */
+.timeline-wrapper-responsive {
+  width: 100%;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  position: relative;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
 .timeline-container-responsive {
-  padding: 0 0.5rem;
+  padding: 0;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .task-timeline-responsive {
   padding: 0;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+  position: relative;
+  max-width: 100%;
+}
+
+/* Layout: Left side = 10% (timeline area), Right side = 90% (card area) */
+.MuiTimelineItem-root {
+  overflow: visible !important;
+  position: relative;
+  display: flex !important;
+}
+
+/* TimelineOppositeContent (Left side - Dates) = 10% */
+.MuiTimelineOppositeContent-root {
+  flex: 0 0 10% !important;
+  max-width: 10% !important;
+  min-width: 80px !important;
+  overflow: visible !important;
+  padding-right: 8px !important;
+}
+
+/* TimelineSeparator (Middle - Connector) = Auto width, always visible */
+.MuiTimelineSeparator-root {
+  overflow: visible !important;
+  position: relative;
+  flex-shrink: 0 !important;
+  min-width: 40px !important;
+}
+
+/* TimelineContent (Right side - Cards) = 90% */
+.MuiTimelineContent-root {
+  flex: 0 0 90% !important;
+  max-width: 90% !important;
+  overflow: visible !important;
+  padding-left: 8px !important;
+}
+
+/* Ensure TimelineConnector is always visible - CRITICAL */
+.MuiTimelineConnector-root {
+  min-height: 40px !important;
+  background-color: #bfbfbf !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  width: 2px !important;
+  margin: 0 auto !important;
+}
+
+.MuiTimeline-root {
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
+  position: relative;
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Ensure no parent containers hide the connector */
+.container-fluid {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  max-width: 100vw;
+  width: 100%;
 }
 
 .task-item-responsive {
@@ -376,9 +532,36 @@
   white-space: nowrap;
 }
 
+/* Board View Responsive Styles */
+.board-columns-container {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 20px !important;
+}
+
+@media (max-width: 768px) {
+  .board-columns-container {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* ============================================
    MEDIA QUERIES
    ============================================ */
+
+/* Hide floating add button on mobile/tablet (max-width: 992px) */
+@media (max-width: 992px) {
+  .float-add-btn-desktop {
+    display: none !important;
+  }
+}
+
+/* Show floating add button only on desktop (min-width: 992px) */
+@media (min-width: 992px) {
+  .float-add-btn-desktop {
+    display: block !important;
+  }
+}
 
 /* Mobile Devices (max-width: 576px) */
 @media (max-width: 576px) {
@@ -414,6 +597,21 @@
 
   .main-content-responsive {
     padding: 0.75rem !important;
+    padding-bottom: 70px !important; /* Space for WhatsApp input bar */
+  }
+
+  .whatsapp-input-bar {
+    padding: 8px 10px !important;
+  }
+
+  .whatsapp-input-field {
+    font-size: 14px !important;
+    padding: 8px 14px !important;
+  }
+
+  .whatsapp-send-btn {
+    width: 40px !important;
+    height: 40px !important;
   }
 
   .create-project-title {
@@ -446,6 +644,12 @@
     font-size: 1.25rem;
   }
 
+  .users-page-container {
+    max-height: calc(100vh - 200px) !important;
+    overflow-y: auto !important;
+    padding-bottom: 70px !important; /* Space for WhatsApp input bar */
+  }
+
   .users-table {
     font-size: 0.8rem;
   }
@@ -475,6 +679,45 @@
 
   .task-subtitle-responsive {
     font-size: 11px !important;
+  }
+
+  .global-search-wrapper {
+    min-width: 120px;
+    max-width: 180px;
+    order: 3;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 8px;
+    display: flex !important;
+    visibility: visible !important;
+  }
+  
+  .global-search-container {
+    width: 100%;
+  }
+  
+  .global-search-input {
+    font-size: 11px !important;
+    height: 30px !important;
+    padding: 0.25rem 0.5rem !important;
+  }
+  
+  .global-search-container .input-group-text {
+    padding: 0 6px !important;
+    height: 30px;
+  }
+  
+  .task-header-responsive {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .task-header-responsive .back-btn-responsive {
+    order: 1;
+  }
+  
+  .task-header-responsive .text-center {
+    order: 2;
   }
 
   .search-input-group-responsive {
@@ -514,6 +757,65 @@
     font-size: 0.7rem;
   }
 
+  .timeline-wrapper-responsive {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-bottom: 70px !important; /* Space for WhatsApp input bar */
+  }
+
+  .timeline-container-responsive {
+    overflow: visible !important;
+    width: 100% !important;
+    padding-bottom: 20px !important; /* Extra padding for last item */
+  }
+
+  /* Mobile: Allow stacking but keep connector visible */
+  .MuiTimelineItem-root {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    overflow: visible !important;
+    position: relative !important;
+  }
+
+  .MuiTimelineOppositeContent-root {
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    min-width: 80px !important;
+    width: 100% !important;
+    padding-right: 0 !important;
+    padding-bottom: 8px !important;
+    text-align: left !important;
+  }
+
+  .MuiTimelineSeparator-root {
+    position: absolute !important;
+    left: 0 !important;
+    height: 100% !important;
+    min-width: 40px !important;
+    overflow: visible !important;
+  }
+
+  .MuiTimelineContent-root {
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding-left: 50px !important;
+    margin-left: 0 !important;
+  }
+
+  .MuiTimelineConnector-root {
+    min-height: 40px !important;
+    background-color: #bfbfbf !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: 100% !important;
+    width: 2px !important;
+    position: absolute !important;
+    left: 19px !important;
+    top: 0 !important;
+  }
+
   .add-task-box-responsive {
     max-width: calc(100% - 30px) !important;
     width: calc(100% - 30px) !important;
@@ -548,6 +850,57 @@
 
 /* Tablet Devices (577px - 768px) */
 @media (min-width: 577px) and (max-width: 768px) {
+  .global-search-wrapper {
+    min-width: 150px;
+    max-width: 200px;
+  }
+  
+  .global-search-input {
+    font-size: 12px !important;
+    height: 32px !important;
+  }
+  
+  .task-header-responsive {
+    flex-wrap: wrap;
+  }
+
+  .timeline-wrapper-responsive {
+    overflow: visible !important;
+  }
+
+  .timeline-container-responsive {
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  /* Tablet: Maintain 10%/90% layout with visible connector */
+  .MuiTimelineItem-root {
+    overflow: visible !important;
+  }
+
+  .MuiTimelineOppositeContent-root {
+    flex: 0 0 10% !important;
+    max-width: 10% !important;
+    min-width: 80px !important;
+    overflow: visible !important;
+  }
+
+  .MuiTimelineContent-root {
+    flex: 0 0 90% !important;
+    max-width: 90% !important;
+    overflow: visible !important;
+  }
+
+  .MuiTimelineConnector-root {
+    min-height: 40px !important;
+    background-color: #bfbfbf !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    width: 2px !important;
+  }
+
   .dashboard-title {
     font-size: 1.75rem;
   }

@@ -1,7 +1,9 @@
+
 // ViewTaskPage.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { auth, db } from "./firebase.js";
+import { toast } from "react-toastify";
 
 
 
@@ -15,6 +17,10 @@ import {
   updateDoc,
   doc,
   deleteDoc,
+  getDoc,
+  getDocs,
+  where,
+  arrayUnion,
 } from "firebase/firestore";
 
 import {
@@ -32,8 +38,15 @@ export default function ViewTaskPage() {
   const { projectId, projectName } = useParams();
 
   const [taskText, setTaskText] = useState("");
-  const [search, setSearch] = useState("");
   const [tasks, setTasks] = useState([]);
+  const [searchTerm, setSearchTerm] = useState(""); // Global search term
+  const [selectedIndex, setSelectedIndex] = useState(-1); // For keyboard navigation
+  const [headerHeight, setHeaderHeight] = useState(0); // Header height for scrollable area
+  const [isMobile, setIsMobile] = useState(false); // Check if mobile/tablet screen (max-width: 992px)
+
+  // Refs for task cards (for scrolling to selected item)
+  const taskRefs = useRef({});
+  const headerRef = useRef(null);
 
   // modal state (edit)
   const [showEditModal, setShowEditModal] = useState(false);
@@ -46,10 +59,51 @@ export default function ViewTaskPage() {
   const STATUS_OPTIONS = ["Pending", "In Progress", "Completed"];
 const [showAddBox, setShowAddBox] = useState(false);
   // const tasksColPath = collection(db, "projects", projectId, "tasks");
-const tasksColPath = projectId
+  const tasksColPath = projectId
   ? collection(db, "projects", projectId, "tasks")
   : null;
 
+  // Mark notifications as seen when user opens chat page (ViewTaskPage)
+  // markSeen() should be called ONLY inside TaskViewPage useEffect
+  useEffect(() => {
+    if (!projectId) return;
+
+    const markNotificationsAsSeen = async () => {
+      try {
+        const user = auth.currentUser;
+        const currentUserUID = user?.uid;
+        if (!currentUserUID) return;
+
+        const notificationsRef = collection(db, "notifications");
+        // Get all notifications for this project
+        const q = query(
+          notificationsRef,
+          where("projectId", "==", projectId)
+        );
+
+        const snapshot = await getDocs(q);
+        
+        // Update only notifications where seenBy does NOT include current user UID
+        const updatePromises = snapshot.docs
+          .filter((docSnap) => {
+            const data = docSnap.data();
+            const seenBy = data.seenBy || [];
+            return !seenBy.includes(currentUserUID);
+          })
+          .map((docSnap) =>
+            updateDoc(doc(db, "notifications", docSnap.id), {
+              seenBy: arrayUnion(currentUserUID), // Add current user UID to seenBy array
+            })
+          );
+
+        await Promise.all(updatePromises);
+      } catch (error) {
+        console.error("Error marking notifications as seen:", error);
+      }
+    };
+
+    markNotificationsAsSeen();
+  }, [projectId]);
 
   // realtime listener
   useEffect(() => {
@@ -71,26 +125,111 @@ const tasksColPath = projectId
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
- // Add task
-const addTask = async () => {
-  if (!taskText.trim()) return;
-  const by = auth.currentUser?.displayName ?? "Guest";
+  // Helper function to get current user's email
+  const getCurrentUserEmail = () => {
+    const user = auth.currentUser;
+    return user?.email || null;
+  };
 
-  await addDoc(tasksColPath, {
-    text: taskText.trim(),
-    status: "Pending",
-    updatedBy: by,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    projectId: projectId,   // <-- REQUIRED !!
-  });
+  // Helper function to check if current user is the task creator
+  const isTaskCreator = (task) => {
+    const currentUserEmail = getCurrentUserEmail();
+    if (!currentUserEmail || !task.createdBy) return false;
+    return task.createdBy === currentUserEmail;
+  };
 
-  setTaskText("");
-};
+  // Add task
+  const addTask = async () => {
+    if (!taskText.trim()) return;
+    const user = auth.currentUser;
+    if (!user) {
+      alert("You must be logged in to create tasks.");
+      return;
+    }
+    
+    const userEmail = user.email || "Guest";
+    const userName = user?.displayName?.trim() || userEmail;
+
+    const taskDocRef = await addDoc(tasksColPath, {
+      text: taskText.trim(),
+      status: "Pending",
+      createdBy: userEmail, // Store email of creator (never changes)
+      createdByName: userName, // Store name of creator (never changes)
+      updatedBy: userName, // Store name of last updater (changes only on status update)
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      projectId: projectId,   // <-- REQUIRED !!
+    });
+
+    // Create notification when task is added
+    // Notifications should be visible to all project members (admin gets user notifications, users get admin notifications)
+    try {
+      const userUID = user.uid;
+      const notificationsRef = collection(db, "notifications");
+      
+      // Get project document to find all assigned users
+      const projectDocRef = doc(db, "projects", projectId);
+      const projectDoc = await getDoc(projectDocRef);
+      
+      if (projectDoc.exists()) {
+        const projectData = projectDoc.data();
+        const projectUsers = projectData.users || []; // Array of user UIDs
+        
+        // Create notification for all project members (excluding the creator)
+        const notificationPromises = projectUsers
+          .filter((uid) => uid !== userUID) // Exclude the creator
+          .map((targetUID) =>
+            addDoc(notificationsRef, {
+              projectId: projectId,
+              projectName: projectName || "Project",
+              taskId: taskDocRef.id,
+              taskName: taskText.trim(),
+              createdBy: userEmail,
+              createdByUID: userUID, // Store UID for filtering
+              createdByName: userName,
+              time: serverTimestamp(),
+              seenBy: [userUID], // Creator should never see badge - add creator to seenBy
+            })
+          );
+        
+        await Promise.all(notificationPromises);
+      } else {
+        // Fallback: create single notification if project doc not found
+        await addDoc(notificationsRef, {
+          projectId: projectId,
+          projectName: projectName || "Project",
+          taskId: taskDocRef.id,
+          taskName: taskText.trim(),
+          createdBy: userEmail,
+          createdByUID: userUID,
+          createdByName: userName,
+          time: serverTimestamp(),
+          seenBy: [userUID], // Creator should never see badge
+        });
+      }
+      
+      // Show toast notification (bottom-left)
+      toast.info(`${userName} created a new task: ${taskText.trim()}`, {
+        position: "bottom-left",
+        autoClose: 3000,
+      });
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      // Don't block task creation if notification fails
+    }
+
+    setTaskText("");
+  };
 
 
   // Open edit modal (we keep modal behavior as original)
   const openEditModal = (task) => {
+    // Check if user is the creator before opening modal
+    if (!isTaskCreator(task)) {
+      alert("You don't have permission to edit this task. Only the creator can edit.");
+      return;
+    }
+    
     setEditingTask({
       ...task,
       text: task.text ?? "",
@@ -103,13 +242,41 @@ const addTask = async () => {
   // Save editing changes
   const saveEdit = async () => {
     if (!editingTask?.id) return;
+    
+    // Check if user is the creator
+    const task = tasks.find(t => t.id === editingTask.id);
+    if (task && !isTaskCreator(task)) {
+      alert("You don't have permission to edit this task. Only the creator can edit.");
+      setShowEditModal(false);
+      setEditingTask(null);
+      return;
+    }
+
+    const user = auth.currentUser;
+    const by = user?.displayName?.trim() || user?.email || "Guest";
+    
+    // Get the original task to check if status changed
+    const originalTask = tasks.find(t => t.id === editingTask.id);
+    const statusChanged = originalTask && originalTask.status !== editingTask.status;
+    
     const ref = doc(db, "projects", projectId, "tasks", editingTask.id);
-    await updateDoc(ref, {
+    
+    // Prepare update object
+    const updateData = {
       text: editingTask.text,
       status: editingTask.status,
-      updatedBy: auth.currentUser?.displayName ?? editingTask.updatedBy ?? "Guest",
       updatedAt: serverTimestamp(),
-    });
+    };
+    
+    // Only update updatedBy if status changed
+    // If only text changed (not status), updatedBy stays the same
+    if (statusChanged) {
+      updateData.updatedBy = by;
+    }
+    
+    // CRITICAL: createdBy and createdByName are NEVER updated - they stay the same forever
+    // These fields are not included in updateData to ensure they never change
+    await updateDoc(ref, updateData);
     setShowEditModal(false);
     setEditingTask(null);
   };
@@ -122,16 +289,20 @@ const addTask = async () => {
 
   const doDelete = async () => {
     if (!deletingTaskId) return;
+    
+    // Check if user is the creator
+    const task = tasks.find(t => t.id === deletingTaskId);
+    if (task && !isTaskCreator(task)) {
+      alert("You don't have permission to delete this task. Only the creator can delete.");
+      setShowDeleteConfirm(false);
+      setDeletingTaskId(null);
+      return;
+    }
+
     await deleteDoc(doc(db, "projects", projectId, "tasks", deletingTaskId));
     setShowDeleteConfirm(false);
     setDeletingTaskId(null);
   };
-
-  // Filter only (NO sort) — search works by status substring
-  const filtered = tasks.filter((t) => {
-    if (!search.trim()) return true;
-    return t.status?.toLowerCase().includes(search.toLowerCase());
-  });
 
   // helper: format Firestore timestamp safely
   const formatTs = (ts) => {
@@ -158,98 +329,256 @@ const addTask = async () => {
   return `${day} ${month}, ${time}`;
 };
 
+  // Helper function to highlight search text
+  const highlightText = (text, searchTerm) => {
+    if (!searchTerm.trim()) return text;
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <mark key={index} style={{ backgroundColor: '#ffeb3b', padding: '2px 0', borderRadius: '2px' }}>
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  };
+
+  // Filter tasks based on search term
+  const filteredTasks = searchTerm.trim()
+    ? tasks.filter((t) => 
+        t.text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.updatedBy?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.status?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : tasks;
+
+  // Get matching task indices for keyboard navigation
+  const matchingTaskIndices = tasks
+    .map((t, index) => {
+      if (!searchTerm.trim()) return -1;
+      const matches = 
+        t.text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.updatedBy?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.status?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matches ? index : -1;
+    })
+    .filter(index => index !== -1);
+
+  // Keyboard navigation handler
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!searchTerm.trim() || matchingTaskIndices.length === 0) return;
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const next = prev < matchingTaskIndices.length - 1 ? prev + 1 : 0;
+          // Scroll to the selected task
+          const taskId = tasks[matchingTaskIndices[next]]?.id;
+          if (taskId && taskRefs.current[taskId]) {
+            taskRefs.current[taskId].scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return next;
+        });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((prev) => {
+          const next = prev > 0 ? prev - 1 : matchingTaskIndices.length - 1;
+          // Scroll to the selected task
+          const taskId = tasks[matchingTaskIndices[next]]?.id;
+          if (taskId && taskRefs.current[taskId]) {
+            taskRefs.current[taskId].scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+          return next;
+        });
+      } else if (e.key === 'Escape') {
+        setSearchTerm("");
+        setSelectedIndex(-1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchTerm, matchingTaskIndices, tasks]);
+
+  // Reset selected index when search term changes
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [searchTerm]);
+
+  // Check if mobile/tablet screen (max-width: 992px)
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 992);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Calculate header height for scrollable area
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    
+    return () => window.removeEventListener('resize', updateHeaderHeight);
+  }, [searchTerm]); // Recalculate when search term changes (affects header height)
 
 
 
   return (
-    <div className="container-fluid p-0">
+    <div className="container-fluid p-0 m-0" style={{ overflowX: "hidden", overflowY: "auto", maxWidth: "100vw", width: "100%", paddingLeft: 0, paddingRight: 0, marginLeft: 0, marginRight: 0 }}>
       {/* Header */}
       <div
-        className="w-100 d-flex align-items-center justify-content-between px-2 px-md-3 py-2 py-md-3 mb-3 mb-md-4 task-header-responsive"
-        style={{ backgroundColor: "#2a8c7b" }}
+        ref={headerRef}
+        className="w-100 d-flex align-items-center justify-content-between flex-wrap py-2 py-md-3 task-header-responsive"
+        style={{ backgroundColor: "#2a8c7b", gap: "10px", position: "sticky", top: 0, zIndex: 100, paddingLeft: "12px", paddingRight: "12px", marginLeft: 0, marginRight: 0 }}
       >
         <button
           className="btn btn-light back-btn-responsive"
-          style={{ borderRadius: "50%", width: "35px", height: "35px", padding: 0, fontSize: "18px" }}
+          style={{ borderRadius: "50%", width: "35px", height: "35px", padding: 0, fontSize: "18px", flexShrink: 0 }}
           onClick={() => window.history.back()}
         >
           ←
         </button>
 
-        <div className="text-center flex-grow-1">
-          <h1 className="text-white fw-bold task-title-responsive">TASKS</h1>
+        <div className="text-center flex-grow-1" style={{ minWidth: "120px" }}>
+          <h1 className="text-white fw-bold task-title-responsive">Chat Box</h1>
           <h2 className="text-white task-subtitle-responsive" style={{ fontSize: "14px" }}>
             {projectName}
           </h2>
         </div>
 
-        <div className="back-btn-responsive" style={{ width: "35px" }} />
+        {/* Global Search Bar */}
+        <div className="global-search-wrapper" style={{ flex: "0 1 auto", minWidth: "150px", maxWidth: "300px", width: "100%", display: "flex", flexDirection: "column" }}>
+          <div className="input-group shadow-sm global-search-container" style={{ width: "100%", display: "flex", position: "relative" }}>
+            <input
+              type="text"
+              className="form-control global-search-input"
+              placeholder="Search all tasks..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setSelectedIndex(-1);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && matchingTaskIndices.length > 0) {
+                  e.preventDefault();
+                  const firstIndex = matchingTaskIndices[0];
+                  const taskId = tasks[firstIndex]?.id;
+                  if (taskId && taskRefs.current[taskId]) {
+                    taskRefs.current[taskId].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setSelectedIndex(0);
+                  }
+                }
+              }}
+              style={{
+                fontSize: "13px",
+                height: "35px",
+              }}
+            />
+            <span
+              className="input-group-text bg-white text-success shadow-sm"
+              style={{
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 16,
+                padding: "0 12px",
+                border: "1px solid #ced4da",
+                borderLeft: "none",
+              }}
+            >
+              <i className="bi bi-search"></i>
+            </span>
+            {searchTerm && (
+              <button
+                className="btn btn-sm text-muted"
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedIndex(-1);
+                }}
+                style={{
+                  position: "absolute",
+                  right: "45px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "18px",
+                  padding: "0 5px",
+                  zIndex: 10,
+                }}
+                title="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          {searchTerm && matchingTaskIndices.length > 0 && (
+            <small className="text-white" style={{ fontSize: "11px", display: "block", marginTop: "4px" }}>
+              {matchingTaskIndices.length} result{matchingTaskIndices.length !== 1 ? 's' : ''} found
+              {selectedIndex >= 0 && ` (${selectedIndex + 1}/${matchingTaskIndices.length})`}
+            </small>
+          )}
+          {searchTerm && matchingTaskIndices.length === 0 && (
+            <small className="text-white" style={{ fontSize: "11px", display: "block", marginTop: "4px" }}>
+              No results found
+            </small>
+          )}
+        </div>
+
       </div>
 
-      {/* Add + Search */}
-      <div className="d-flex justify-content-between align-items-center mb-3 mb-md-4 px-2 px-md-0 search-container-responsive">
-        {/* Floating Add Button */}
-      <button onClick={() => setShowAddBox(true)} className="btn btn-success shadow-lg task-add-btn-responsive"
-       style={{
-                 position: "fixed",
-                 bottom: "25px",
-                 right: "25px",
-                 width: "60px",
-                 height: "60px",
-                 borderRadius: "50%",
-                 fontSize: "32px",
-                 zIndex: 1000,
-               }}
-             > +</button>
-
-
-        <div
-  className="input-group shadow-sm ms-auto search-input-group-responsive"
-  style={{
-    width: "100%",
-    maxWidth: "300px",
-  }}
->
-  <input
-    className="form-control search-input-responsive"
-    placeholder="Search status"
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-    style={{
-      height: 40,
-      fontSize: 14,
-    }}
-  />
-
-  {/* NEW SEARCH ICON */}
-  <span
-    className="input-group-text bg-success text-white shadow-sm ms-auto search-bar-responsive"
-    style={{
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 18,
-      padding: "0 12px",
-    }}
-  >
-    <i className="bi bi-search"></i>
-  </span>
-</div>
-
+      {/* Scrollable Timeline Container */}
+      <div 
+        className="timeline-wrapper-responsive"
+        style={{
+          maxHeight: isMobile 
+            ? `calc(100vh - ${headerHeight}px - 60px)` // Mobile: Subtract header + WhatsApp input bar (60px)
+            : `calc(100vh - ${headerHeight}px - 90px)`, // Desktop: Subtract header + button space
+          overflowY: "auto",
+          overflowX: "hidden",
+          position: "relative",
+          paddingBottom: isMobile ? "70px" : "90px" // Add padding to prevent content from being hidden behind input bar
+        }}
+      >
+        <div className="timeline-container-responsive" style={{ paddingLeft: 0, paddingRight: 0 }}>
+          <Timeline position="right" className="task-timeline-responsive">   {/* force items to the right */}
+    {tasks.length === 0 ? (
+      <div style={{ padding: "24px 12px" }}>
+        <p className="text-center text-muted mt-4">
+          No tasks found.
+        </p>
       </div>
-
-      {/* MUI Timeline */}
-    
-<div className="timeline-container-responsive px-2 px-md-0">
-  <Timeline position="right" className="task-timeline-responsive">   {/* force items to the right */}
-    {filtered.length === 0 ? (
-      <div className="px-2 px-md-4" style={{ padding: "24px 0" }}>
-        <p className="text-center text-muted mt-4">No tasks found.</p>
+    ) : filteredTasks.length === 0 ? (
+      <div style={{ padding: "24px 12px" }}>
+        <p className="text-center text-muted mt-4">
+          No tasks match your search.
+        </p>
       </div>
     ) : (
-      filtered.map((t) => (
-        <TimelineItem key={t.id} className="task-item-responsive">
+      filteredTasks.map((t, index) => {
+        const originalIndex = tasks.findIndex(task => task.id === t.id);
+        const isSelected = selectedIndex >= 0 && matchingTaskIndices[selectedIndex] === originalIndex;
+        
+        return (
+        <TimelineItem 
+          key={t.id}
+          className="task-item-responsive"
+        >
 
           {/* LEFT SIDE — ONLY DATE */}
           <TimelineOppositeContent
@@ -258,7 +587,7 @@ const addTask = async () => {
             color="text.secondary"
             className="timeline-date-responsive"
           >
-            {formatTs(t.updatedAt)}
+             {formatTs(t.updatedAt)}
           </TimelineOppositeContent>
 
           <TimelineSeparator>
@@ -268,13 +597,32 @@ const addTask = async () => {
 
           {/* RIGHT SIDE — COMPLETE TASK CARD */}
           <TimelineContent sx={{ py: "20px", px: 2 }} className="timeline-content-responsive">
-            <Paper elevation={2} className="task-card-paper" style={{ padding: 14, borderRadius: 10, maxWidth: "330px", width: "100%" }}>
+            <Paper 
+              elevation={2} 
+              className="task-card-paper"
+              ref={(el) => {
+                if (el) taskRefs.current[t.id] = el;
+              }}
+              style={{ 
+                padding: 14, 
+                borderRadius: 10, 
+                maxWidth: "330px", 
+                width: "100%",
+                boxShadow: isSelected ? "0 4px 8px rgba(255, 235, 59, 0.5)" : "0 2px 4px rgba(0,0,0,0.1)",
+                border: isSelected ? "2px solid #ffeb3b" : "none",
+                transition: "all 0.2s ease",
+                backgroundColor: isSelected ? "#fffde7" : "white",
+              }}
+            >
               <div className="d-flex align-items-start justify-content-between flex-wrap task-card-content">
 
                 {/* LEFT — TEXT & STATUS */}
                 <div className="task-card-left" style={{ maxWidth: "75%", flex: "1 1 auto", minWidth: "200px" }}>
+                  <div className="small text-muted mb-2 task-created-by">
+                    Created By: <strong>{highlightText(t.createdByName || "Unknown", searchTerm)}</strong>
+                  </div>
                   <div className="small text-muted mb-2 task-updated-by">
-                    Updated By: <strong>{t.updatedBy}</strong>
+                    Updated By: <strong>{highlightText(t.updatedBy || "Unknown", searchTerm)}</strong>
                   </div>
 
                   {/* status dropdown inline update */}
@@ -286,13 +634,30 @@ const addTask = async () => {
     value={t.status}
     onChange={async (e) => {
       const user = auth.currentUser;
-       const by = user?.displayName?.trim()? user.displayName: user?.email ?? "Guest";
+      if (!user) {
+        alert("You must be logged in to update task status.");
+        return;
+      }
+      
+      const userName = user?.displayName?.trim() || user?.email || "Guest";
       const ref = doc(db, "projects", projectId, "tasks", t.id);
-      await updateDoc(ref, {
-        status: e.target.value,
-        updatedBy: by,
-        updatedAt: serverTimestamp(),
-      });
+      
+      try {
+        // Only update status, updatedBy, and updatedAt when status changes
+        // createdBy and createdByName stay the same
+        await updateDoc(ref, {
+          status: e.target.value,
+          updatedBy: userName, // Update who last updated the status
+          updatedAt: serverTimestamp(),
+          // Note: createdBy and createdByName are NOT included - they never change
+        });
+      } catch (error) {
+        console.error("Error updating task status:", error);
+        
+        alert(`Failed to update task status: ${error.message || "Unknown error"}`);
+        // Reset dropdown to original value on error
+        e.target.value = t.status;
+      }
     }}
     style={{
       width: 150,
@@ -316,42 +681,56 @@ const addTask = async () => {
 </div>
 
 
-                  <h5 className="card-title mb-0 task-text-responsive">{t.text}</h5>
+                  <h5 className="card-title mb-0 task-text-responsive">
+                    {highlightText(t.text || "", searchTerm)}
+                  </h5>
                 </div>
 
-                {/* RIGHT — ACTION BUTTONS */}
-                <div className="text-end d-flex gap-1 task-action-buttons">
-
-  {/* EDIT ICON */}
-  <button
-    className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center task-action-btn"
-    onClick={() => openEditModal(t)}
-    style={{
-      borderRadius: "50%",
-      width: "32px",
-      height: "32px",
-      padding: 0,
-    }}
-    title="Edit"
-  >
-    <i className="bi bi-pencil-square"></i>
-  </button>
-  {/* DELETE ICON */}
-  <button
-    className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center task-action-btn"
-    onClick={() => confirmDelete(t.id)}
-    style={{
-      borderRadius: "50%",
-      width: "32px",
-      height: "32px",
-      padding: 0,
-    }}
-    title="Delete"
-  >
-    <i className="bi bi-trash3"></i>
-  </button>
-
-</div>
+                {/* RIGHT — ACTION BUTTONS - Only show if user is creator */}
+                {isTaskCreator(t) && (
+                  <div className="text-end d-flex gap-1 task-action-buttons">
+                    {/* EDIT ICON */}
+                    <button
+                      className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center task-action-btn"
+                      onClick={() => {
+                        if (!isTaskCreator(t)) {
+                          alert("You don't have permission to edit this task. Only the creator can edit.");
+                          return;
+                        }
+                        openEditModal(t);
+                      }}
+                      style={{
+                        borderRadius: "50%",
+                        width: "32px",
+                        height: "32px",
+                        padding: 0,
+                      }}
+                      title="Edit"
+                    >
+                      <i className="bi bi-pencil-square"></i>
+                    </button>
+                    {/* DELETE ICON */}
+                    <button
+                      className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center task-action-btn"
+                      onClick={() => {
+                        if (!isTaskCreator(t)) {
+                          alert("You don't have permission to delete this task. Only the creator can delete.");
+                          return;
+                        }
+                        confirmDelete(t.id);
+                      }}
+                      style={{
+                        borderRadius: "50%",
+                        width: "32px",
+                        height: "32px",
+                        padding: 0,
+                      }}
+                      title="Delete"
+                    >
+                      <i className="bi bi-trash3"></i>
+                    </button>
+                  </div>
+                )}
 
 
               </div>
@@ -359,52 +738,143 @@ const addTask = async () => {
           </TimelineContent>
 
         </TimelineItem>
-      ))
+        );
+      })
     )}
   </Timeline>
-</div>
-{showAddBox && (
-  <div
-    className="card shadow add-task-box-responsive"
-    style={{
-      position: "fixed",
-      bottom: "20px",
-      right: "20px",
-      width: "100%",
-      maxWidth: "300px",
-      zIndex: 1000,
-      padding: "15px",
-      borderRadius: "12px",
-      animation: "slideUp 0.3s ease",
-      margin: "0 15px",
-    }}
-  >
-    <div className="d-flex justify-content-between align-items-center mb-2">
-      <h6 className="m-0 add-task-title">Add Task</h6>
-      <button
-        className="btn-close"
-        onClick={() => setShowAddBox(false)}
-      ></button>
-    </div>
+        </div>
+      </div>
 
-    <input
-      value={taskText}
-      onChange={(e) => setTaskText(e.target.value)}
-      className="form-control mb-3 add-task-input"
-      placeholder="Enter task"
-    />
+      {/* WhatsApp-style Bottom Input Bar - Mobile/Tablet View (max-width: 992px) */}
+      {isMobile && (
+        <div 
+          className="whatsapp-input-bar"
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: "#f0f0f0",
+            padding: "8px 12px",
+            borderTop: "1px solid #e0e0e0",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            boxShadow: "0 -2px 10px rgba(0,0,0,0.1)"
+          }}
+        >
+          <input
+            type="text"
+            value={taskText}
+            onChange={(e) => setTaskText(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                addTask();
+              }
+            }}
+            className="form-control whatsapp-input-field"
+            placeholder="Type a message..."
+            style={{
+              flex: 1,
+              borderRadius: "20px",
+              border: "1px solid #e0e0e0",
+              padding: "10px 16px",
+              fontSize: "15px",
+              backgroundColor: "white",
+              outline: "none"
+            }}
+          />
+          <button
+            onClick={() => {
+              addTask();
+            }}
+            className="btn btn-success whatsapp-send-btn"
+            disabled={!taskText.trim()}
+            style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+              backgroundColor: taskText.trim() ? "#2a8c7b" : "#ccc",
+              border: "none",
+              cursor: taskText.trim() ? "pointer" : "not-allowed"
+            }}
+          >
+            <i className="bi bi-send-fill" style={{ fontSize: "18px", color: "white" }}></i>
+          </button>
+        </div>
+      )}
 
-    <button
-      className="btn btn-success w-100 add-task-submit-btn"
-      onClick={() => {
-        addTask();
-        setShowAddBox(false);
-      }}
-    >
-      Add
-    </button>
-  </div>
-)}
+      {/* Desktop: Floating Add Button (min-width: 992px) */}
+      {!isMobile && (
+        <>
+          <div style={{ position: "fixed", bottom: "25px", right: "25px", zIndex: 1000 }}>
+            <button 
+              onClick={() => setShowAddBox(true)} 
+              className="btn btn-success shadow-lg task-add-btn-responsive"
+              style={{
+                width: "60px",
+                height: "60px",
+                borderRadius: "50%",
+                fontSize: "32px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0
+              }}
+            > 
+              +
+            </button>
+          </div>
+
+          {showAddBox && (
+            <div
+              className="card shadow add-task-box-responsive"
+              style={{
+                position: "fixed",
+                bottom: "20px",
+                right: "20px",
+                width: "100%",
+                maxWidth: "300px",
+                zIndex: 1000,
+                padding: "15px",
+                borderRadius: "12px",
+                animation: "slideUp 0.3s ease",
+                margin: "0 15px",
+              }}
+            >
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <h6 className="m-0 add-task-title">Add Task</h6>
+                <button
+                  className="btn-close"
+                  onClick={() => setShowAddBox(false)}
+                ></button>
+              </div>
+
+              <input
+                value={taskText}
+                onChange={(e) => setTaskText(e.target.value)}
+                className="form-control mb-3 add-task-input"
+                placeholder="Enter task"
+              />
+
+              <button
+                className="btn btn-success w-100 add-task-submit-btn"
+                onClick={() => {
+                  addTask();
+                  setShowAddBox(false);
+                }}
+              >
+                Add
+              </button>
+            </div>
+          )}
+        </>
+      )}
 
 
       {/* ---------- Edit Modal ---------- */}
